@@ -13,6 +13,10 @@ def function_lab2(x):
     return (x[0]) ** 2 + (x[1]) ** 2
 
 
+def func_nd(x: np.ndarray):
+    return sum((xi - i) ** 2 for i, xi in enumerate(x.flat))
+
+
 def bi_sect(func, a, b, eps, max_iters) -> float:
     """
     Метод Дихотомии
@@ -110,7 +114,18 @@ def fib(func, a, b, eps, max_iters):
     return (a + b) * .5
 
 
-def bisect_nd(func: Callable[[np.ndarray], float], r1: np.ndarray, r2: np.ndarray, eps: float, max_iters: int) -> np.ndarray:
+def bisect_multidimensional(func, r1: np.ndarray, r2: np.ndarray, eps: float, max_iters: int) -> np.ndarray:
+
+    """
+    Метод Бисекции
+    :param func: целевая функция.
+    :param r1: начальное значение вектора координат.
+    :param r2: конечное значение вектора координат.
+    :param eps: допустимая погрешность.
+    :param max_iters: максимальное число итераций.
+    :return:  возвращаем найденное оптимальное значение вектора координат.
+    """
+
     d = r2 - r1
     d_eps = eps / np.sqrt(d * d).sum()
 
@@ -131,6 +146,16 @@ def bisect_nd(func: Callable[[np.ndarray], float], r1: np.ndarray, r2: np.ndarra
 
 
 def per_cor_descend(f, x0, eps: float = 1e-3, max_iters: int = 1000):
+
+    """
+    Метод покоординатного спуска
+    :param f: целевая функция.
+    :param x0: начальное значение.
+    :param eps: точность оптимизации.
+    :param max_iters: максимальное число итераций
+    :return: возвращаем найденное оптимальное значение вектора координат.
+    """
+
     opt_cords_n, lam, x1 = 0, 0, 0
 
     for i in range(max_iters):
@@ -149,7 +174,7 @@ def per_cor_descend(f, x0, eps: float = 1e-3, max_iters: int = 1000):
 
         x1 = np.copy(x0)
         x1[cord_id] += lam
-        x0 = bisect_nd(f, x0, x1, eps, max_iters)
+        x0 = bisect_multidimensional(f, x0, x1, eps, max_iters)
 
         if abs(x0[cord_id] - x_curr) < eps:
             opt_cords_n += 1
@@ -163,11 +188,11 @@ def per_cor_descend(f, x0, eps: float = 1e-3, max_iters: int = 1000):
     return x0
 
 
-r1 = np.array([-1, -1])
-r2 = np.array([1, 1])
+r1 = np.array([i + 10 for i in range(32)])
+r2 = np.array([1 for i in range(32)])
 
-print(bisect_nd(function_lab2, r1, r2, 1e-6, 1000))
+#print(bisect_multidimensional(func_nd, r1, r2, 1e-6, 1000))
 
-x0 = np.array([-10, 8])
-
-print(per_cor_descend(function_lab2, x0, 1e-6, 1000))
+#x0 = np.array([-10, 8])
+x0 = np.array([i + 10 for i in range(32)])
+print(per_cor_descend(func_nd, x0, 1e-6, 1000))
