@@ -1,3 +1,4 @@
+import math
 from typing import Callable
 from numpy.linalg import norm
 import numpy as np
@@ -188,11 +189,116 @@ def per_cor_descend(f, x0, eps: float = 1e-3, max_iters: int = 1000):
     return x0
 
 
-r1 = np.array([i + 10 for i in range(32)])
-r2 = np.array([1 for i in range(32)])
+def partial(func, x, index, eps) -> float:
+    """
+    Вычисляет приближенное значение частной производной функции `func` по переменной с индексом `index`
+    в точке `x`, используя метод конечных разностей.
+    :param func: функция, для которой вычисляется частная производная
+    :param x: список значений переменных функции `func` в точке, где необходимо вычислить частную производную
+    :param index: индекс переменной в списке `x`, по которой необходимо вычислить частную производную
+    :param eps: шаг для вычисления конечных разностей
+    :return: приближенное значение частной производной функции `func` по переменной с индексом `index` в точке `x`
+    """
+    x[index] += eps
+    f_r = func(x)
+    x[index] -= 2 * eps
+    f_l = func(x)
+    x[index] += eps
+    return (f_r - f_l) / eps * .5
+
+
+def gradient(func, x, eps):
+    """
+    Данный код реализует функцию, которая вычисляет градиент
+    :param func: функция, чей градиент необходимо вычислить.
+    :param x: точка, в которой необходимо вычислить градиент.
+    :param eps: шаг для метода конечных разностей.
+    :return: вектор частных производных функции func в точке x.
+    """
+    # Создаем массив нулей для хранения компонент градиента.
+    g = np.zeros_like(x)
+    # Проходимся по всем компонентам градиента и вычисляем их с помощью функции partial.
+    for i in range(x.size):
+        g[i] = partial(func, x, i, eps)
+    # Возвращаем вектор градиента.
+    return g
+
+
+def gradient_desect(func, x0, eps, max_iters):
+    """
+    Данная функция реализует метод градиентного спуска с методом бисекции для многомерной функции.
+    :param func: целевая функция, для которой необходимо найти минимум.
+    :param x0: начальное значение аргументов функции.
+    :param eps: заданная точность, при достижении которой алгоритм остановится.
+    :param max_iters: максимальное число итераций алгоритма.
+    :return: Возвращает найденное значение аргумента функции приближенно, которое минимизирует функцию.
+    """
+    x_1 = None
+    for i in range(max_iters):
+        """
+        Эта строка вычисляет новое приближение для значения аргумента функции x путем вычитания из текущего значения x0 
+        произведения градиента функции gradient(func, x0, eps) на некоторое число 1.0.
+        Коэффициент 1.0 здесь служит для управления скоростью сходимости алгоритма, но в данном случае он не играет 
+        особой роли, так как не изменяет направление движения.
+        """
+        x_1 = x0 - 1.0 * gradient(func, x0, eps)
+        x_1 = bisect_multidimensional(func, x0, x_1, eps, max_iters)
+        if np.linalg.norm(x_1 - x0) < eps:
+            break
+        x_1, x0 = x0, x_1
+
+    return (x_1 + x0) * .5
+
+
+def magnitude_n(array: np.ndarray):
+    return math.sqrt(sum((x * x for x in array.flat)))
+
+
+def conj_gradient_desc(function, x0, eps, max_iters):
+    """
+    Метод сопряженных градиентов для многомерной оптимизации функции.
+    :param function: Функция, которую нужно оптимизировать.
+    :param x0: Начальное приближение для оптимальной точки.
+    :param eps: Заданная точность оптимизации.
+    :param max_iters: Максимальное количество итераций.
+    :return:
+    """
+
+    # Инициализация начальных значений для prev и temp
+    prev, temp = x0, x0
+    # Расчет антиградиента в начальной точке
+    anti = (-1)*gradient(function, x0, eps)
+    # Цикл до достижения заданной точности или максимального количества итераций
+    for i in range(max_iters):
+        # Расчет временной точки temp
+        temp = prev + anti
+        # Оптимизация функции в интервале между prev и temp методом бисекции
+        temp = bisect_multidimensional(function, prev, temp, eps, 1000)
+
+        # Если достигнута заданная точность, выход из цикла
+        if magnitude_n(anti) < eps or magnitude_n(temp-prev) < eps:
+            break
+
+        # Расчет градиента в точке temp
+        temp_grad = gradient(function, temp, eps)
+        # Расчет коэффициента w
+        w = math.pow(magnitude_n(temp_grad), 2) / math.pow(magnitude_n(anti), 2)
+        # Обновление значения антиградиента
+        anti = anti*w - temp_grad
+        # Обновление значения prev
+        prev = temp
+
+    # Возвращение оптимальной точки
+    return temp
+
+#r1 = np.array([i + 10 for i in range(32)])
+#r2 = np.array([1 for i in range(32)])
 
 #print(bisect_multidimensional(func_nd, r1, r2, 1e-6, 1000))
 
 #x0 = np.array([-10, 8])
 x0 = np.array([i + 10 for i in range(32)])
-print(per_cor_descend(func_nd, x0, 1e-6, 1000))
+print(gradient_desect(func_nd, x0, 1e-6, 100))
+print(conj_gradient_desc(func_nd, x0, 1e-6, 100))
+#print(per_cor_descend())
+
