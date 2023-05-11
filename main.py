@@ -5,9 +5,12 @@ import numpy as np
 
 PHI = (1 + 5 ** 0.5) / 2
 
+def magnitude_n(array: np.ndarray):
+    return math.sqrt(sum((float(x) ** 2 for x in array.flat)))
+
 
 def function_lab1(x):
-    return x ** 3 - 2 * x - 5
+    return x[0] ** 2 + 2 * x[1] ** 2
 
 
 def function_lab2(x):
@@ -128,6 +131,7 @@ def bisect_multidimensional(func, r1: np.ndarray, r2: np.ndarray, eps: float, ma
     """
 
     d = r2 - r1
+    #print('!!!', d)
     d_eps = eps / np.sqrt(d * d).sum()
 
     tl = 0.0
@@ -190,115 +194,94 @@ def per_cor_descend(f, x0, eps: float = 1e-3, max_iters: int = 1000):
 
 
 def partial(func, x, index, eps) -> float:
-    """
-    Вычисляет приближенное значение частной производной функции `func` по переменной с индексом `index`
-    в точке `x`, используя метод конечных разностей.
-    :param func: функция, для которой вычисляется частная производная
-    :param x: список значений переменных функции `func` в точке, где необходимо вычислить частную производную
-    :param index: индекс переменной в списке `x`, по которой необходимо вычислить частную производную
-    :param eps: шаг для вычисления конечных разностей
-    :return: приближенное значение частной производной функции `func` по переменной с индексом `index` в точке `x`
-    """
     x[index] += eps
     f_r = func(x)
-    x[index] -= 2 * eps
+    x[index] -= 2.0 * eps
     f_l = func(x)
     x[index] += eps
-    return (f_r - f_l) / eps * .5
+    return (f_r - f_l) * 0.5 / eps
 
 
 def gradient(func, x, eps):
-    """
-    Данный код реализует функцию, которая вычисляет градиент
-    :param func: функция, чей градиент необходимо вычислить.
-    :param x: точка, в которой необходимо вычислить градиент.
-    :param eps: шаг для метода конечных разностей.
-    :return: вектор частных производных функции func в точке x.
-    """
-    # Создаем массив нулей для хранения компонент градиента.
     g = np.zeros_like(x)
-    # Проходимся по всем компонентам градиента и вычисляем их с помощью функции partial.
     for i in range(x.size):
         g[i] = partial(func, x, i, eps)
-    # Возвращаем вектор градиента.
     return g
 
 
 def gradient_desect(func, x0, eps, max_iters):
-    """
-    Данная функция реализует метод градиентного спуска с методом бисекции для многомерной функции.
-    :param func: целевая функция, для которой необходимо найти минимум.
-    :param x0: начальное значение аргументов функции.
-    :param eps: заданная точность, при достижении которой алгоритм остановится.
-    :param max_iters: максимальное число итераций алгоритма.
-    :return: Возвращает найденное значение аргумента функции приближенно, которое минимизирует функцию.
-    """
-    x_1 = None
+    x_0, x_1 = x0, x0
     for i in range(max_iters):
-        """
-        Эта строка вычисляет новое приближение для значения аргумента функции x путем вычитания из текущего значения x0 
-        произведения градиента функции gradient(func, x0, eps) на некоторое число 1.0.
-        Коэффициент 1.0 здесь служит для управления скоростью сходимости алгоритма, но в данном случае он не играет 
-        особой роли, так как не изменяет направление движения.
-        """
-        x_1 = x0 - 1.0 * gradient(func, x0, eps)
-        x_1 = bisect_multidimensional(func, x0, x_1, eps, max_iters)
-        if np.linalg.norm(x_1 - x0) < eps:
+        x_1 = x_0 - 1.0 * gradient(func, x_0, eps)
+        x_1 = bisect_multidimensional(func, x_0, x_1, eps, max_iters)
+        if np.linalg.norm(x_1 - x_0) < eps:
             break
-        x_1, x0 = x0, x_1
+        x_0 = x_1
 
-    return (x_1 + x0) * .5
-
-
-def magnitude_n(array: np.ndarray):
-    return math.sqrt(sum((x * x for x in array.flat)))
+    return (x_1 + x_0) * .5
 
 
 def conj_gradient_desc(function, x0, eps, max_iters):
-    """
-    Метод сопряженных градиентов для многомерной оптимизации функции.
-    :param function: Функция, которую нужно оптимизировать.
-    :param x0: Начальное приближение для оптимальной точки.
-    :param eps: Заданная точность оптимизации.
-    :param max_iters: Максимальное количество итераций.
-    :return:
-    """
-
-    # Инициализация начальных значений для prev и temp
     prev, temp = x0, x0
-    # Расчет антиградиента в начальной точке
-    anti = (-1)*gradient(function, x0, eps)
-    # Цикл до достижения заданной точности или максимального количества итераций
+    anti = (-1) * gradient(function, x0, eps)
     for i in range(max_iters):
-        # Расчет временной точки temp
         temp = prev + anti
-        # Оптимизация функции в интервале между prev и temp методом бисекции
         temp = bisect_multidimensional(function, prev, temp, eps, 1000)
 
-        # Если достигнута заданная точность, выход из цикла
-        if magnitude_n(anti) < eps or magnitude_n(temp-prev) < eps:
+        if np.linalg.norm(anti) < eps or np.linalg.norm(temp-prev) < eps:
             break
 
-        # Расчет градиента в точке temp
         temp_grad = gradient(function, temp, eps)
-        # Расчет коэффициента w
-        w = math.pow(magnitude_n(temp_grad), 2) / math.pow(magnitude_n(anti), 2)
-        # Обновление значения антиградиента
-        anti = anti*w - temp_grad
-        # Обновление значения prev
+        w = math.pow(np.linalg.norm(temp_grad), 2) / math.pow(np.linalg.norm(anti), 2)
+        anti = anti * w - temp_grad
         prev = temp
 
-    # Возвращение оптимальной точки
     return temp
 
-#r1 = np.array([i + 10 for i in range(32)])
-#r2 = np.array([1 for i in range(32)])
 
-#print(bisect_multidimensional(func_nd, r1, r2, 1e-6, 1000))
+def partial2(func, x, index_1, index_2, eps):
+    x[index_2] -= eps
+    f_l = partial(func, x, index_1, eps)
+    x[index_2] += 2.0 * eps
+    f_r = partial(func, x, index_1, eps)
+    x[index_2] -= eps
+    return (f_r - f_l) / eps * 0.5
 
-#x0 = np.array([-10, 8])
-x0 = np.array([i + 10 for i in range(32)])
-print(gradient_desect(func_nd, x0, 1e-6, 100))
-print(conj_gradient_desc(func_nd, x0, 1e-6, 100))
-#print(per_cor_descend())
 
+def hessian(f, x, eps):
+    ddf = np.zeros((x.size, x.size,), dtype=np.float32)
+    for row in range(x.size):
+        for col in range(row + 1):
+            ddf[row, col] = partial2(f, x, row, col, eps)
+            ddf[col, row] = ddf[row, col]
+    return ddf
+
+
+
+
+def newtonRaphson(func, xStart, eps, maxIters):
+    xi = xStart.copy()
+    xi1 = xStart.copy()
+    counter = 0
+    while counter != maxIters:
+        hessian2 = hessian(func, xi, eps)
+        inv_hessian = np.linalg.inv(hessian2)
+        grad = gradient(func, xi, eps)
+        xi1 = xi - inv_hessian @ grad
+
+        counter += 1
+        if np.linalg.norm(xi1 - xi) < eps:
+            break
+        xi = xi1
+
+    return (xi + xi1) * 0.5
+
+
+#x0 = np.array([i + 10 for i in range(64)])
+#print(gradient_desect(func_nd, x0, 1e-6, 100))
+#print(conj_gradient_desc(func_nd, x0, 1e-6, 100))
+
+x0 = np.array([i for i in range(32)], dtype=np.float32)
+#x = np.array([1, 1])
+#print(hessian(func_nd, x0, 1e-2))
+print(newtonRaphson(func_nd, x0, 1e-6, 1000))
