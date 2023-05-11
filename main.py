@@ -2,8 +2,13 @@ import math
 from typing import Callable
 from numpy.linalg import norm
 import numpy as np
+from typing import Tuple
+import matplotlib.pyplot as plt
 
 PHI = (1 + 5 ** 0.5) / 2
+eps = 1e-6
+max_it = 100
+alpha = 1.0
 
 def magnitude_n(array: np.ndarray):
     return math.sqrt(sum((float(x) ** 2 for x in array.flat)))
@@ -277,11 +282,116 @@ def newtonRaphson(func, xStart, eps, maxIters):
     return (xi + xi1) * 0.5
 
 
+def internal_penalty(x, n, b) -> float:
+    return sum(xi for xi in np.power((n @ x - b) * alpha, -2.0).flat)
+
+
+def external_penalty(x, n, b) -> float:
+    dist = n @ x - b
+    # return sum(xi for xi in (np.heaviside(dist, 1.0)).flat)
+    return sum(xi for xi in (np.heaviside(dist, 1.0) * np.power(32 * dist, 2.0)).flat)
+
+
+def _eval_penalty(penalty: Callable[[np.ndarray], float], xs: np.ndarray = None, ys: np.ndarray = None):
+    if xs is None:
+        xs = np.linspace(0.0, 10.0, 256, dtype=np.float32)
+    if ys is None:
+        ys = np.linspace(0.0, 10.0, 256, dtype=np.float32)
+    return np.array([[penalty(np.array([xi, yi]))for yi in ys.flat]for xi in xs.flat])
+
+
+def eval_ext_penalty(x: np.ndarray = None, y: np.ndarray = None):
+    return _eval_penalty(lambda x: external_penalty(x, N, B), x, y)
+
+
+def eval_int_penalty(x: np.ndarray = None, y: np.ndarray = None):
+    return _eval_penalty(lambda x: min(internal_penalty(x, N, B), 100.0), x, y)
+
+
+def draw_line(n, b, bounds: Tuple[float, float, float, float] = (0.0, 0.0, 10.0, 10.0)) -> None:
+    b =     b / n[1]
+    k = -n[0] / n[1]
+    x_0, x_1 = bounds[0], bounds[2]
+    y_0, y_1 = bounds[1], bounds[3]
+
+    y_1 = (y_1 - b) / k
+    y_0 = (y_0 - b) / k
+
+    if y_0 < y_1:
+        x_1 = min(x_1, y_1)
+        x_0 = max(x_0, y_0)
+    else:
+        x_1 = min(x_1, y_0)
+        x_0 = max(x_0, y_1)
+
+    x = [x_0, x_1]
+    y = [b + x_0 * k, b + x_1 * k]
+    plt.plot(x, y, ':k')
+
+    x_c = sum(x) * 0.5
+    y_c = sum(y) * 0.5
+
+    xn = [x_c, x_c + n[0] * 2.5]
+    yn = [y_c, y_c + n[1] * 2.5]
+    plt.plot(xn, yn, 'r')
+
+
+def draw_lines(bounds: Tuple[float, float, float, float] = (0.0, 0.0, 10.0, 10.0)):
+    for n, b in zip(N, B):
+        draw_line(n, b, bounds)
+
+
+
+
 #x0 = np.array([i + 10 for i in range(64)])
 #print(gradient_desect(func_nd, x0, 1e-6, 100))
 #print(conj_gradient_desc(func_nd, x0, 1e-6, 100))
 
-x0 = np.array([i for i in range(32)], dtype=np.float32)
+#x0 = np.array([i for i in range(64)], dtype=float)
 #x = np.array([1, 1])
 #print(hessian(func_nd, x0, 1e-2))
-print(newtonRaphson(func_nd, x0, 1e-6, 1000))
+#print(newtonRaphson(func_nd, x0, 1e-6, 1000))
+
+def func(x):
+    return (x[0] - 4) ** 2 + (x[1] - 4) ** 2
+
+d = np.array([-10, 5, 8, 32], dtype = np.float64)
+x_start = np.array([-3, -4], dtype = np.float64)
+n = np.array([[3,1],[-3,4],[4,-4], [-4, -1]], dtype = np.float64)
+
+print("Метод Ньютона-Рафсона", newtonRaphson(func, x_start, eps, max_it))
+print("Метод Ньютона-Рафсона с внешними штрафами", newtonRaphson(lambda x: func(x) + external_penalty(x_start, n , d), x_start, eps, max_it))
+print("Метод Ньютона-Рафсона с внутренними штрафами", newtonRaphson(lambda x: func(x) + internal_penalty(x_start, n, d), x_start, eps, max_it))
+# a = np.array([i for i in range(0, 128)], dtype = np.float64)
+# print("Метод Ньютона-Рафсона", newtone_raphson(func1, a, eps, max_it))
+
+N = np.array([[3,1],[-3,4],[4,-4], [-4, -1]], dtype=np.float32)
+n = np.linalg.norm(N, axis=1)
+alpha = 1.0
+for i in range(N.shape[0]):
+    N[i, :] /= n[i]
+
+B = np.array([-10, 5, 8, 32], dtype=np.float32) / n
+
+x = np.linspace(-10.0, 5.0, 256, dtype=np.float32)
+y = np.linspace(-10.0, 5.0, 256, dtype=np.float32)
+bounds = (np.amin(x), np.amin(y), np.amax(x), np.amax(y))
+z = eval_ext_penalty(x, y)
+plt.imshow(np.flipud(z), extent=[np.amin(x), np.amax(x), np.amin(y), np.amax(y)])
+plt.title("external penalty")
+plt.xlabel("x_1")
+plt.ylabel("x_2")
+plt.grid(True)
+draw_lines(bounds)
+plt.show()
+
+z = eval_int_penalty(x, y)
+plt.imshow(np.flipud(z), extent=[np.amin(x), np.amax(x), np.amin(y), np.amax(y)])
+plt.title("internal penalty")
+plt.xlabel("x_1")
+plt.ylabel("x_2")
+plt.grid(True)
+draw_lines(bounds)
+plt.show()
+
+
