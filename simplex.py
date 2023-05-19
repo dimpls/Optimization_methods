@@ -202,76 +202,108 @@ class Simplex:
         return main_row_id
 
     def _validate_solution(self) -> bool:
-        ...
+        args_fun = self._simplex_t[-1][0:len(self._bounds_m[0])]
+
+        return any(item < 0 for item in args_fun)
 
     def _current_solution(self) -> np.ndarray:
-
-
-        args_fun = self._simplex_t[3][0:2]
-        has_negative = True
-        while has_negative:
-            print(self._simplex_t)
-            has_negative = any(item < 0 for item in args_fun)
-            if has_negative:
-                current_col = args_fun.min() #минимальный в строке
-                index = (np.where(args_fun == current_col)) #индекс минимального элемента
-                print('col = ', index[0])
-
-            print(self._simplex_t)
-            bi_allow = []
-            xi_curreny = []
-            for i in range(len(self._simplex_t) - 1):
-                bi_allow.append(self._simplex_t[i][-1])  # bi разрешающий
-
-            for i in range(len(self._simplex_t) - 1):
-                bi_allow[i] = bi_allow[i] / self._simplex_t[i][int(index[0])]
-
-            positive_numbers = [num for num in bi_allow if num > 0]
-
-            index_min_bi_allow = bi_allow.index(min(positive_numbers))
-            print('row = ', index_min_bi_allow)
-
-
-            for i in range(len(self._simplex_t)):
-                lst = []
-                for j in range(len(self._simplex_t[i])):
-                    if i != index_min_bi_allow:
-                        koef = self._simplex_t[i][int(index[0])] / self._simplex_t[index_min_bi_allow][int(index[0])]
-                        #print(self._simplex_t[index_min_bi_allow][j])
-                        lst.append(self._simplex_t[i][j] - koef * self._simplex_t[index_min_bi_allow][j])
-                    else:
-                        lst.append(self._simplex_t[i][j] / self._simplex_t[index_min_bi_allow][int(index[0])])
-                # if i != index_min_bi_allow:
-                self._simplex_t[i] = np.array(lst)
         print(self._simplex_t)
-        args_fun = self._simplex_t[3][0:2]
-        has_negative = any(item < 0 for item in args_fun)
+        delta_row = self._simplex_t[-1, :-1]
+        bounds_col = self._simplex_t[:-1, -1]
+
+        #args_fun = self._simplex_t[3][0:2]
+        while self._validate_solution():
+            main_col = np.argmin(delta_row)
+            if main_col == -1:
+                break
+            main_colon = self._simplex_t[:-1, main_col]
+
+            delta = 1e32
+
+            main_row = -1
+            #print(main_colon, bounds_col)
+            for row_id, (ai, bi) in enumerate(zip(main_colon.flat, bounds_col.flat)):
+                if ai <= 0.0:
+                    continue
+                b_div_a = bi / ai
+                print(b_div_a)
+                if delta < b_div_a:
+                    continue
+                delta = b_div_a
+                main_row = row_id
+            #print(delta, main_row, "!!")
+            #delta  вед эл
+
+            if main_row == -1:
+                break
+
+            a_main = self._simplex_t[main_row, main_col]
+
+            self._simplex_t[main_row, :] /= a_main
+
+            print("main-row", main_row, "main-col", main_col, 'delta', delta)
+            for row in range(self._simplex_t.shape[0]):
+                if row == main_row:
+                    continue
+
+                k = self._simplex_t[row, main_col]
+
+                self._simplex_t[row, :] -= k * self._simplex_t[main_row, :]
+            print(self._simplex_t)
+
+            # if not self._validate_solution():
+            #     lst = []
+            #     for i in range(2):
+            #         index = np.where(self._simplex_t[i][0:2] == 1.0)
+            #         lst.append(f"x{index[0] + 1} = {self._simplex_t[i][-1]}")
+            #     return lst
+        return self._simplex_t
 
 
+            #print(self._simplex_t)
+            #if self._validate_solution:
+            #    current_col = args_fun.min() #минимальный в строке
+            #    index = (np.where(args_fun == current_col)) #индекс минимального элемента
+            #    #print('col = ', index[0])
+
+            #bi_allow = []
+            #for i in range(len(self._simplex_t) - 1):
+            #    bi_allow.append(self._simplex_t[i][-1])  # bi разрешающий
+
+            #for i in range(len(self._simplex_t) - 1):
+            #    bi_allow[i] = bi_allow[i] / self._simplex_t[i][int(index[0])]
+
+            #positive_numbers = [num for num in bi_allow if num > 0]
+
+            #index_min_bi_allow = bi_allow.index(min(positive_numbers))
+            #print('row = ', index_min_bi_allow)
 
 
+        #    for i in range(len(self._simplex_t)):
+        #         lst = []
+        #         for j in range(len(self._simplex_t[i])):
+        #             if i != index_min_bi_allow:
+        #                 koef = self._simplex_t[i][int(index[0])] / self._simplex_t[index_min_bi_allow][int(index[0])]
+        #                 #print(self._simplex_t[index_min_bi_allow][j])
+        #                 lst.append(self._simplex_t[i][j] - koef * self._simplex_t[index_min_bi_allow][j])
+        #             else:
+        #                 lst.append(self._simplex_t[i][j] / self._simplex_t[index_min_bi_allow][int(index[0])])
+        #         # if i != index_min_bi_allow:
+        #         self._simplex_t[i] = np.array(lst)
+        # print(self._simplex_t)
+        # args_fun = self._simplex_t[3][0:2]
+        # if not self._validate_solution():
+        #     lst = []
+        #     for i in range(2):
+        #         index = np.where(self._simplex_t[i][0:2] == 1.0)
+        #         lst.append(f"x{index[0] + 1} = {self._simplex_t[i][-1]}")
+        #     return lst
 
 
 
     def solve(self):
-        while True:
-            main_col = self._get_main_col()
-            main_row = self._get_main_row(main_col)
-            # кеширование состояния симплекс таблицы
-            self._simplex_t_history.append(SimplexStep(main_row, main_col,
-                                                       np.copy(self._basis_args),
-                                                       np.copy(self._simplex_t)))
-            if main_col == -1:
-                break
-            if main_row == -1:
-                break
-            main_elem = self._simplex_t[main_row, main_col]
-            self._basis_args[main_row] = main_col
-            self._simplex_t[main_row, :] /= main_elem
-            for row_id in range(self._simplex_t.shape[0]):
-                if row_id == main_row:
-                    continue
-                self._simplex_t[row_id, :] -= self._simplex_t[main_row, :] * self._simplex_t[row_id, main_col]
+        return self._current_solution()
+
 
     def simplex_steps(self) -> str:
         """
@@ -318,10 +350,9 @@ def read_simplex(path_to_file: str) -> List[Simplex]:
 
 
 simplexes = read_simplex('sm_task.json')
-simplexes[0]._current_solution()
+print(simplexes[0])
+nd = simplexes[0].solve()
 
-# [print(simplex.simplex_table()) for simplex in simplexes]
-# print(simplexes[0].simplex_table())
-# simplexes[0].solve()
-# print(simplexes[0])
-# print(simplexes[0].simplex_steps())
+for i in range(2):
+    index = np.where(nd[i][0:2] == 1.0)
+    print(f"x{index[0] + 1} = {nd[i][-1]}")

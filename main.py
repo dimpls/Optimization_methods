@@ -6,7 +6,7 @@ from typing import Tuple
 import matplotlib.pyplot as plt
 
 PHI = (1 + 5 ** 0.5) / 2
-eps = 1e-6
+eps = 1e-4
 max_it = 100
 alpha = 1.0
 
@@ -262,8 +262,6 @@ def hessian(f, x, eps):
     return ddf
 
 
-
-
 def newtonRaphson(func, xStart, eps, maxIters):
     xi = xStart.copy()
     xi1 = xStart.copy()
@@ -353,28 +351,28 @@ def draw_lines(bounds: Tuple[float, float, float, float] = (0.0, 0.0, 10.0, 10.0
 #print(newtonRaphson(func_nd, x0, 1e-6, 1000))
 
 def func(x):
-    return (x[0] - 4) ** 2 + (x[1] - 4) ** 2
+    return (x[0] - 2.5) ** 2 + (x[1] - 2.5) ** 2
 
-d = np.array([-10, 5, 8, 32], dtype = np.float64)
-x_start = np.array([-3, -4], dtype = np.float64)
-n = np.array([[3,1],[-3,4],[4,-4], [-4, -1]], dtype = np.float64)
+
+d = np.array([0.75, -8, 22/7, 2], dtype=float)
+x_start = np.array([2, 2], dtype=float)
+n = np.array([[-0.25, 1], [-2, 1], [-1/7, 1], [1, 1]], dtype=float)
 
 print("Метод Ньютона-Рафсона", newtonRaphson(func, x_start, eps, max_it))
-print("Метод Ньютона-Рафсона с внешними штрафами", newtonRaphson(lambda x: func(x) + external_penalty(x_start, n , d), x_start, eps, max_it))
+print("Метод Ньютона-Рафсона с внешними штрафами", newtonRaphson(lambda x: func(x) + external_penalty(x_start, n, d), x_start, eps, max_it))
 print("Метод Ньютона-Рафсона с внутренними штрафами", newtonRaphson(lambda x: func(x) + internal_penalty(x_start, n, d), x_start, eps, max_it))
-# a = np.array([i for i in range(0, 128)], dtype = np.float64)
-# print("Метод Ньютона-Рафсона", newtone_raphson(func1, a, eps, max_it))
 
-N = np.array([[3,1],[-3,4],[4,-4], [-4, -1]], dtype=np.float32)
+
+N = np.array([[0.25, -1], [2, -1], [-1/7, 1], [-1, -1]], dtype=np.float32)
 n = np.linalg.norm(N, axis=1)
 alpha = 1.0
 for i in range(N.shape[0]):
     N[i, :] /= n[i]
 
-B = np.array([-10, 5, 8, 32], dtype=np.float32) / n
+B = np.array([-0.75, 8, 22/7, -2], dtype=np.float32) / n
 
-x = np.linspace(-10.0, 5.0, 256, dtype=np.float32)
-y = np.linspace(-10.0, 5.0, 256, dtype=np.float32)
+x = np.linspace(-5.0, 10.0, 256, dtype=np.float32)
+y = np.linspace(-5.0, 10.0, 256, dtype=np.float32)
 bounds = (np.amin(x), np.amin(y), np.amax(x), np.amax(y))
 z = eval_ext_penalty(x, y)
 plt.imshow(np.flipud(z), extent=[np.amin(x), np.amax(x), np.amin(y), np.amax(y)])
@@ -394,4 +392,8 @@ plt.grid(True)
 draw_lines(bounds)
 plt.show()
 
+# (1, 1)
+# (5, 2)
+# (6, 4)
+# (-1, 3)
 
